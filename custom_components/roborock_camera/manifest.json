@@ -1,0 +1,17 @@
+{
+  "domain": "roborock_camera",
+  "name": "Roborock Camera",
+  "after_dependencies": [
+    "roborock"
+  ],
+  "codeowners": [
+    "@fszalaj"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/fszalaj/roborock-camera",
+  "integration_type": "device",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/fszalaj/roborock-camera/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

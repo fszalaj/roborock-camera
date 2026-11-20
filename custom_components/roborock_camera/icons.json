@@ -1,0 +1,15 @@
+{
+  "entity": {
+    "button": {
+      "pet_search": {"default": "mdi:paw"},
+      "resume_patrol": {"default": "mdi:map-marker-path"},
+      "stop_moving": {"default": "mdi:stop-circle-outline"}
+    },
+    "camera": {
+      "live": {"default": "mdi:robot-vacuum"}
+    },
+    "number": {
+      "talk_volume": {"default": "mdi:account-voice"}
+    }
+  }
+}

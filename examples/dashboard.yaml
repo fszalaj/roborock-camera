@@ -1,0 +1,70 @@
+# Generic dashboard section with built-in cards. Replace every my_vacuum entity id (also in data and target)
+# with the full entity id from Settings > Devices & services > Entities.
+type: vertical-stack
+cards:
+  - type: picture-entity
+    entity: camera.my_vacuum_live_view
+    camera_view: live
+    show_state: false
+  - type: tile
+    entity: vacuum.my_vacuum
+    features:
+      - type: vacuum-commands
+        commands: [start_pause, stop, return_home, locate]
+  - type: grid
+    columns: 3
+    square: false
+    cards:
+      - type: button
+        entity: button.my_vacuum_search_for_pet
+        tap_action:
+          action: perform-action
+          perform_action: button.press
+          target: {entity_id: button.my_vacuum_search_for_pet}
+      - type: button
+        entity: button.my_vacuum_resume_patrol
+        tap_action:
+          action: perform-action
+          perform_action: button.press
+          target: {entity_id: button.my_vacuum_resume_patrol}
+      - type: button
+        entity: button.my_vacuum_stop_remote_drive
+        tap_action:
+          action: perform-action
+          perform_action: button.press
+          target: {entity_id: button.my_vacuum_stop_remote_drive}
+  - type: grid
+    columns: 4
+    square: false
+    cards:
+      - type: button
+        name: Turn left
+        icon: mdi:arrow-u-left-top-bold
+        tap_action:
+          action: perform-action
+          perform_action: roborock_camera.move
+          data: {entity_id: vacuum.my_vacuum, velocity: 0, rotation: 45, duration: 1000}
+      - type: button
+        name: Forward
+        icon: mdi:arrow-up-bold
+        tap_action:
+          action: perform-action
+          perform_action: roborock_camera.move
+          data: {entity_id: vacuum.my_vacuum, velocity: 0.2, rotation: 0, duration: 1000}
+      - type: button
+        name: Back
+        icon: mdi:arrow-down-bold
+        tap_action:
+          action: perform-action
+          perform_action: roborock_camera.move
+          data: {entity_id: vacuum.my_vacuum, velocity: -0.2, rotation: 0, duration: 1000}
+      - type: button
+        name: Turn right
+        icon: mdi:arrow-u-right-top-bold
+        tap_action:
+          action: perform-action
+          perform_action: roborock_camera.move
+          data: {entity_id: vacuum.my_vacuum, velocity: 0, rotation: -45, duration: 1000}
+  - type: entities
+    entities:
+      - number.my_vacuum_talk_volume

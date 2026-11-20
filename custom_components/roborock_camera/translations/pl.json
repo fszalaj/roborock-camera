@@ -1,0 +1,108 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Kamera Roborock",
+        "description": "Wybierz odkurzacz z integracji Roborock i podaj adres RTSP strumienia go2rtc tego robota (np. rtsp://go2rtc:8554/odkurzacz). Bez adresu nie powstanie kamera; przyciski i usługi działają.",
+        "data": {
+          "vacuum": "Odkurzacz",
+          "stream_url": "Strumień go2rtc (RTSP)"
+        }
+      }
+    },
+    "error": {
+      "not_roborock": "Ten odkurzacz nie jest z integracji Roborock.",
+      "bad_stream": "Podaj adres rtsp:// bez użytkownika, hasła i parametrów."
+    },
+    "abort": {
+      "already_configured": "Ten odkurzacz jest już dodany."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "stream_url": "Strumień go2rtc (RTSP)"
+        }
+      }
+    },
+    "error": {
+      "bad_stream": "Podaj adres rtsp:// bez użytkownika, hasła i parametrów."
+    }
+  },
+  "entity": {
+    "button": {
+      "pet_search": {
+        "name": "Szukaj zwierzaka"
+      },
+      "resume_patrol": {
+        "name": "Wznów patrol"
+      },
+      "stop_moving": {
+        "name": "Zatrzymaj zdalną jazdę"
+      }
+    },
+    "camera": {
+      "live": {
+        "name": "Podgląd na żywo"
+      }
+    },
+    "number": {
+      "talk_volume": {
+        "name": "Głośność rozmowy"
+      }
+    }
+  },
+  "services": {
+    "move": {
+      "name": "Jazda",
+      "description": "Steruj robotem jak joystickiem. Wyślij ponownie przed końcem czasu, żeby jechał dalej; sam staje 1,5 s po ostatnim ruchu.",
+      "fields": {
+        "entity_id": {
+          "name": "Odkurzacz",
+          "description": "Odkurzacz Roborock."
+        },
+        "velocity": {
+          "name": "Prędkość",
+          "description": "Do przodu (dodatnia) lub do tyłu, do 0,3 m/s."
+        },
+        "rotation": {
+          "name": "Skręt",
+          "description": "Stopnie, dodatnie w lewo."
+        },
+        "duration": {
+          "name": "Czas",
+          "description": "Jak długo trwa ten ruch."
+        }
+      }
+    },
+    "stop_moving": {
+      "name": "Zatrzymaj jazdę",
+      "description": "Kończy zdalną jazdę od razu.",
+      "fields": {
+        "entity_id": {
+          "name": "Odkurzacz",
+          "description": "Odkurzacz Roborock."
+        }
+      }
+    },
+    "patrol": {
+      "name": "Patrol",
+      "description": "Przejazd przez punkty mapy z włączoną kamerą.",
+      "fields": {
+        "entity_id": {
+          "name": "Odkurzacz",
+          "description": "Odkurzacz Roborock."
+        },
+        "map_index": {
+          "name": "Mapa",
+          "description": "Numer mapy, 0 dla pierwszej."
+        },
+        "points": {
+          "name": "Punkty",
+          "description": "Lista współrzędnych [x, y] na mapie."
+        }
+      }
+    }
+  }
+}

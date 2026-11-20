@@ -1,0 +1,108 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Roborock camera",
+        "description": "Pick a vacuum set up by the Roborock integration and enter the RTSP address of this robot's go2rtc stream (for example rtsp://go2rtc:8554/vacuum). Without it there is no camera entity; buttons and services still work.",
+        "data": {
+          "vacuum": "Vacuum",
+          "stream_url": "go2rtc stream (RTSP)"
+        }
+      }
+    },
+    "error": {
+      "not_roborock": "This vacuum is not from the Roborock integration.",
+      "bad_stream": "Use an rtsp:// address without user, password or query."
+    },
+    "abort": {
+      "already_configured": "This vacuum is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "stream_url": "go2rtc stream (RTSP)"
+        }
+      }
+    },
+    "error": {
+      "bad_stream": "Use an rtsp:// address without user, password or query."
+    }
+  },
+  "entity": {
+    "button": {
+      "pet_search": {
+        "name": "Search for pet"
+      },
+      "resume_patrol": {
+        "name": "Resume patrol"
+      },
+      "stop_moving": {
+        "name": "Stop remote drive"
+      }
+    },
+    "camera": {
+      "live": {
+        "name": "Live view"
+      }
+    },
+    "number": {
+      "talk_volume": {
+        "name": "Talk volume"
+      }
+    }
+  },
+  "services": {
+    "move": {
+      "name": "Drive",
+      "description": "Drive the robot like a joystick. Send again within the duration to keep moving; it stops by itself 1.5 s after the last move.",
+      "fields": {
+        "entity_id": {
+          "name": "Vacuum",
+          "description": "Roborock vacuum."
+        },
+        "velocity": {
+          "name": "Speed",
+          "description": "Forward (positive) or back, up to 0.3 m/s."
+        },
+        "rotation": {
+          "name": "Turn",
+          "description": "Degrees, positive turns left."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long this move lasts."
+        }
+      }
+    },
+    "stop_moving": {
+      "name": "Stop driving",
+      "description": "End remote drive now.",
+      "fields": {
+        "entity_id": {
+          "name": "Vacuum",
+          "description": "Roborock vacuum."
+        }
+      }
+    },
+    "patrol": {
+      "name": "Patrol",
+      "description": "Drive through map points with the camera on.",
+      "fields": {
+        "entity_id": {
+          "name": "Vacuum",
+          "description": "Roborock vacuum."
+        },
+        "map_index": {
+          "name": "Map",
+          "description": "Map number, 0 for the first floor map."
+        },
+        "points": {
+          "name": "Points",
+          "description": "List of [x, y] map coordinates."
+        }
+      }
+    }
+  }
+}
