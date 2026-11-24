@@ -51,6 +51,11 @@
       "talk_volume": {
         "name": "Talk volume"
       }
+    },
+    "switch": {
+      "clean_then_mop": {
+        "name": "Vacuum, then mop"
+      }
     }
   },
   "services": {

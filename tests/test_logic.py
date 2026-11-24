@@ -37,5 +37,47 @@ class Drive(unittest.TestCase):
         self.assertEqual((p["velocity"], p["omega"], p["duration"]), (0.3, round(math.radians(-179), 1), 3000))
 
 
+class ThenMop(unittest.TestCase):
+    G = (102, 235, 303)
+
+    def test_on_from_empty(self):
+        t = logic.then_mop_table([1, 2], [], self.G, True)
+        self.assertEqual(t, [
+            {"segment": 1, "fan_power": 102, "water_box_mode": 235, "mop_mode": 303, "repeat": 1, "seq_type": 1},
+            {"segment": 2, "fan_power": 102, "water_box_mode": 235, "mop_mode": 303, "repeat": 1, "seq_type": 1},
+        ])
+        self.assertTrue(logic.then_mop_on([1, 2], t))
+        self.assertFalse(logic.then_mop_stale([1, 2], t, self.G))
+        self.assertTrue(logic.then_mop_stale([1, 2], t, (104, 235, 303)))
+
+    def test_off_restores_empty(self):
+        on = logic.then_mop_table([1, 2], [], self.G, True)
+        self.assertEqual(logic.then_mop_table([1, 2], on, self.G, False), [])
+        self.assertFalse(logic.then_mop_on([1, 2], []))
+
+    def test_keeps_other_rooms_and_unknown_keys(self):
+        table = [{"segment": 9, "fan_power": 101, "seq_type": 0}, {"segment": 1, "fan_power": 104, "water_box_mode": 200,
+                 "mop_mode": 300, "repeat": 2, "seq_type": 0, "mop_power": 7}]
+        on = logic.then_mop_table([1], table, self.G, True)
+        self.assertIn(table[0], on)
+        room = next(e for e in on if e["segment"] == 1)
+        self.assertEqual((room["repeat"], room["mop_power"], room["fan_power"], room["seq_type"]), (2, 7, 102, 1))
+        self.assertEqual(logic.then_mop_table([1], on, (104, 235, 303), False), [table[0]],
+                         "off drops every room the order set, also after the global settings changed")
+        with self.assertRaises(ValueError):
+            logic.then_mop_table([1], [{"segment": 1}, {"segment": 1}], self.G, True)
+
+    def test_refuses_custom_or_unknown(self):
+        for g in ((106, 204, 302), (102, None, 303)):
+            with self.assertRaises(ValueError):
+                logic.then_mop_table([1], [], g, True)
+        self.assertFalse(logic.then_mop_on([], []))
+        with self.assertRaises(ValueError):
+            logic.then_mop_table([], [], self.G, True)
+        with self.assertRaises(ValueError):
+            logic.then_mop_table([], [{"segment": 1, "seq_type": 1}], self.G, False)
+        self.assertEqual(logic.then_mop_table([1], [], (106, 204, 302), False), [], "off works in custom mode")
+
+
 if __name__ == "__main__":
     unittest.main()

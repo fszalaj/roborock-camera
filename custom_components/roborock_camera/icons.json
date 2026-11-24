@@ -10,6 +10,9 @@
     },
     "number": {
       "talk_volume": {"default": "mdi:account-voice"}
+    },
+    "switch": {
+      "clean_then_mop": {"default": "mdi:broom"}
     }
   }
 }

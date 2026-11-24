@@ -46,3 +46,47 @@ class RemoteDrive:
         """Call after the robot accepted app_rc_end, or refused app_rc_start (no session to end)."""
         self.active = False
         self.ended_at = now
+
+
+CUSTOM = (106, 204, 302)  # fan, water, route the robot reports while it runs its own per-room custom mode
+SEQ_THEN_MOP = 1
+
+
+def then_mop_on(rooms: list[int], table: list[dict]) -> bool:
+    """Every room is vacuumed before it is mopped."""
+    by = {e.get("segment"): e for e in table}
+    return bool(rooms) and all(by.get(r, {}).get("seq_type") == SEQ_THEN_MOP for r in rooms)
+
+
+def then_mop_table(rooms: list[int], table: list[dict], settings: tuple[int, int, int], on: bool) -> list[dict]:
+    """The per-room table to write. On: every room follows the global settings and is vacuumed, then mopped.
+    Off: rooms this order set lose their override, other rooms keep theirs."""
+    if on and (tuple(settings) == CUSTOM or None in settings):
+        raise ValueError("global settings unknown or custom")
+    if not rooms:
+        raise ValueError("the robot lists no rooms on this map")
+    fan, water, route = settings
+    out = []
+    by = {e.get("segment"): e for e in table}
+    if None in by or len(by) != len(table):
+        raise ValueError("room table without or with repeated segments")
+    for seg, entry in by.items():
+        if seg in rooms:
+            continue
+        out.append(entry)  # a room of another map or one the robot does not list: untouched
+    for seg in rooms:
+        entry = by.get(seg)
+        if on:
+            out.append({**(entry or {}), "segment": seg, "fan_power": fan, "water_box_mode": water,
+                        "mop_mode": route, "repeat": (entry or {}).get("repeat", 1), "seq_type": SEQ_THEN_MOP})
+        elif entry and entry.get("seq_type") != SEQ_THEN_MOP:
+            out.append(entry)
+    return out
+
+
+def then_mop_stale(rooms: list[int], table: list[dict], settings: tuple[int, int, int]) -> bool:
+    """On, but a room still holds older global settings."""
+    if not then_mop_on(rooms, table) or tuple(settings) == CUSTOM or None in settings:
+        return False
+    by = {e.get("segment"): e for e in table}
+    return any((by[r].get("fan_power"), by[r].get("water_box_mode"), by[r].get("mop_mode")) != tuple(settings) for r in rooms)

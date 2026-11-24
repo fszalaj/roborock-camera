@@ -51,6 +51,11 @@
       "talk_volume": {
         "name": "Głośność rozmowy"
       }
+    },
+    "switch": {
+      "clean_then_mop": {
+        "name": "Najpierw odkurzanie, potem mopowanie"
+      }
     }
   },
   "services": {

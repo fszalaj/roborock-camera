@@ -25,7 +25,7 @@ from .const import CONF_VACUUM, DOMAIN
 from .logic import MAX_ROTATION, MAX_VELOCITY, RemoteDrive
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.BUTTON, Platform.CAMERA, Platform.NUMBER]
+PLATFORMS = [Platform.BUTTON, Platform.CAMERA, Platform.NUMBER, Platform.SWITCH]
 IDLE_STOP_S = 1.5  # the robot stops when no move arrives for this long after the last one ends
 RETRY_STOP_S = 2
 

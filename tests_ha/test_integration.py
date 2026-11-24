@@ -302,3 +302,101 @@ async def test_unconfirmed_stop_blocks_moves(hass, setup, sent):
     await hass.async_block_till_done()
     assert [c[1] for c in sent][-1] == "app_rc_end"
 
+
+
+class FakeRobot:
+    """Core Roborock coordinator stand-in: status settings, rooms and the per-room table."""
+
+    def __init__(self):
+        from types import SimpleNamespace as NS
+
+        self.duid = "duid123"
+        self.table, self.sets, self.listeners = [], [], []
+        self.status = NS(fan_power=102, water_box_mode=235, mop_mode=303, in_cleaning=0)
+        robot = self
+
+        class Rooms:
+            rooms = [NS(segment_id=1), NS(segment_id=2)]
+
+            async def refresh(self):
+                pass
+
+        class Command:
+            async def send(self, command, params=None):
+                if command == "get_customize_clean_mode":
+                    return [dict(e) for e in robot.table]
+                robot.sets.append(params)
+                robot.table = [dict(e) for e in params]
+
+        self.properties_api = NS(status=self.status, rooms=Rooms(), command=Command())
+
+    def async_add_listener(self, cb):
+        self.listeners.append(cb)
+        return lambda: self.listeners.remove(cb)
+
+
+@pytest.fixture
+async def then_mop(hass, vacuum, sent):
+    from types import SimpleNamespace as NS
+    from homeassistant.config_entries import ConfigEntryState
+
+    core = FakeRobot()
+    roborock = hass.config_entries.async_entries("roborock")[0]
+    roborock.runtime_data = NS(v1=[core])
+    roborock.mock_state(hass, ConfigEntryState.LOADED)
+    entry = MockConfigEntry(domain=DOMAIN, title="Robo", unique_id=vacuum.unique_id, data={CONF_VACUUM: vacuum.id})
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    yield core
+    await hass.config_entries.async_unload(entry.entry_id)
+    roborock.mock_state(hass, ConfigEntryState.NOT_LOADED)  # the core integration is not installed in tests
+
+
+async def test_clean_then_mop_on_off(hass, then_mop):
+    sw = "switch.robo_vacuum_then_mop"
+    assert hass.states.get(sw).state == "off"
+    await hass.services.async_call("switch", "turn_on", {"entity_id": sw}, blocking=True)
+    assert hass.states.get(sw).state == "on"
+    assert [e["seq_type"] for e in then_mop.table] == [1, 1]
+    assert {e["mop_mode"] for e in then_mop.table} == {303}
+    await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
+    assert hass.states.get(sw).state == "off" and then_mop.table == []
+
+
+async def test_clean_then_mop_waits_for_dock_and_follows_settings(hass, then_mop):
+    sw = "switch.robo_vacuum_then_mop"
+    await hass.services.async_call("switch", "turn_on", {"entity_id": sw}, blocking=True)
+    hass.states.async_set("vacuum.robo", "cleaning")
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
+    then_mop.status.fan_power = 104
+    for cb in then_mop.listeners:
+        cb()
+    await hass.async_block_till_done()
+    assert len(then_mop.sets) == 1, "no table write during a run"
+    hass.states.async_set("vacuum.robo", "docked")
+    for cb in then_mop.listeners:
+        cb()
+    await hass.async_block_till_done()
+    assert len(then_mop.sets) == 2 and {e["fan_power"] for e in then_mop.table} == {104}
+    for cb in then_mop.listeners:
+        cb()
+    await hass.async_block_till_done()
+    assert len(then_mop.sets) == 2, "in sync: nothing more is written"
+
+
+async def test_clean_then_mop_not_during_a_dock_visit_and_sync_rereads(hass, then_mop):
+    sw = "switch.robo_vacuum_then_mop"
+    then_mop.status.in_cleaning = 1  # docked to wash the mop mid-run
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call("switch", "turn_on", {"entity_id": sw}, blocking=True)
+    assert then_mop.sets == []
+    then_mop.status.in_cleaning = 0
+    await hass.services.async_call("switch", "turn_on", {"entity_id": sw}, blocking=True)
+    then_mop.table = []  # cleared in the vendor app; the cached table still says on
+    then_mop.status.fan_power = 104
+    for cb in then_mop.listeners:
+        cb()
+    await hass.async_block_till_done()
+    assert then_mop.table == [] and len(then_mop.sets) == 1, "a sync re-reads and does not turn the order back on"
