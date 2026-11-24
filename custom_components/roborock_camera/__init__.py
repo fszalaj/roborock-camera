@@ -86,7 +86,10 @@ class Robot:
                 return  # a stop came in, or this move expired while it waited
             # Armed before sending: a failed send still ends in a stop.
             self._arm_stop(duration_ms / 1000 + IDLE_STOP_S)
-            for command, params in self.drive.move(velocity, rotation, duration_ms):
+            cmds = self.drive.move(velocity, rotation, duration_ms, self.hass.loop.time())
+            if not cmds:
+                return  # too soon after the last session; the caller's next move starts it
+            for command, params in cmds:
                 if command == "app_rc_move" and (
                     epoch != self._epoch or self.hass.loop.time() - asked > duration_ms / 1000
                 ):
@@ -115,7 +118,7 @@ class Robot:
                 if not self.closing:
                     self._arm_stop(RETRY_STOP_S)  # keep trying until the robot confirms, also after a cancel
                 raise
-            self.drive.ended()
+            self.drive.ended(self.hass.loop.time())
             self._broken = False
 
     async def _idle_stop(self, gen: int, _now) -> None:

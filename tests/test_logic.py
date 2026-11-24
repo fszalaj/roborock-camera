@@ -24,6 +24,14 @@ class Drive(unittest.TestCase):
         self.assertFalse(d.active)
         self.assertEqual(d.move(0, 0, 500)[1][1][0]["seqnum"], 1)
 
+    def test_restart_gap(self):
+        d = logic.RemoteDrive()
+        d.move(0.2, 0, 500, now=10)
+        d.ended(now=11)
+        self.assertEqual(d.move(0.2, 0, 500, now=12), [], "too soon after the end: nothing is sent")
+        self.assertFalse(d.active)
+        self.assertEqual([c for c, _ in d.move(0.2, 0, 500, now=11 + logic.RESTART_GAP_S)], ["app_rc_start", "app_rc_move"])
+
     def test_limits(self):
         p = logic.RemoteDrive().move(5, -500, 99999)[1][1][0]
         self.assertEqual((p["velocity"], p["omega"], p["duration"]), (0.3, round(math.radians(-179), 1), 3000))

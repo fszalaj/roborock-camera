@@ -4,6 +4,7 @@ import math
 
 MAX_VELOCITY = 0.3  # m/s, the app's limit
 MAX_ROTATION = 179  # degrees
+RESTART_GAP_S = 2.5  # the robot refuses app_rc_start for about a second after a session ended
 
 
 class RemoteDrive:
@@ -12,9 +13,13 @@ class RemoteDrive:
     def __init__(self) -> None:
         self.active = False
         self.seq = 0
+        self.ended_at = -math.inf
 
-    def move(self, velocity: float, rotation: float, duration_ms: int) -> list[tuple[str, list | dict]]:
+    def move(self, velocity: float, rotation: float, duration_ms: int, now: float = math.inf) -> list[tuple[str, list | dict]]:
+        """No commands while a new session would start too soon after the last one ended."""
         cmds: list[tuple[str, list | dict]] = []
+        if not self.active and now - self.ended_at < RESTART_GAP_S:
+            return cmds
         if not self.active:
             self.active = True
             self.seq = 0
@@ -37,6 +42,7 @@ class RemoteDrive:
         )
         return cmds
 
-    def ended(self) -> None:
-        """Call only after the robot accepted app_rc_end."""
+    def ended(self, now: float = -math.inf) -> None:
+        """Call after the robot accepted app_rc_end, or refused app_rc_start (no session to end)."""
         self.active = False
+        self.ended_at = now

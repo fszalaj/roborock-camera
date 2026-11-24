@@ -250,9 +250,11 @@ async def test_failed_start_blocks_moves_until_stop(hass, setup, sent):
     assert [c[1] for c in sent] == ["app_rc_start"]
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=3))
     await hass.async_block_till_done()
-    await hass.services.async_call(
-        DOMAIN, "move", {"entity_id": "vacuum.robo", "velocity": 0.2, "rotation": 0}, blocking=True
-    )
+    move = {"entity_id": "vacuum.robo", "velocity": 0.2, "rotation": 0}
+    await hass.services.async_call(DOMAIN, "move", move, blocking=True)
+    assert [c[1] for c in sent] == ["app_rc_start", "app_rc_end"], "no restart right after the end"
+    setup.runtime_data.drive.ended_at -= 10  # the restart gap has passed
+    await hass.services.async_call(DOMAIN, "move", move, blocking=True)
     assert [c[1] for c in sent] == ["app_rc_start", "app_rc_end", "app_rc_start", "app_rc_move"]
 
 
