@@ -3,6 +3,7 @@
 Home Assistant custom integration that adds the camera and the camera-robot features of Roborock vacuums to the robot you already have in the core **Roborock** integration:
 
 - **Live view** camera entity, from your go2rtc stream (RTSP).
+- **Vacuum, then mop** switch: every room is vacuumed before it is mopped (robots that support the order, such as Saros 20).
 - **Talk volume** for talking through the robot's speaker (a WebRTC card with a microphone against your go2rtc).
 - Buttons: **Search for pet**, **Resume patrol**, **Stop remote drive** (ends a `move` session; to stop a pet search or patrol use the vacuum's own stop or return to dock).
 - Services: `roborock_camera.move` (joystick-style), `roborock_camera.stop_moving`, `roborock_camera.patrol` (map points). They and the buttons need control permission on the vacuum.
@@ -24,6 +25,7 @@ Tested on a Saros 20 (`roborock.vacuum.a288`, firmware 02.57.88) with Home Assis
 | Talk through the robot (go2rtc backchannel) | audio reaches the robot; not confirmed by ear |
 | Patrol through map points | works; points are whole map coordinates |
 | Drive to a point | core service `roborock.set_vacuum_goto_position`; works |
+| Vacuum, then mop | the robot keeps the order (per-room table read back); the order in a real run not yet observed. While on, every room follows the global settings; the switch changes the table only when the robot is docked, because a write during a run pauses it |
 
 Other Roborock models with remote video may work; reports are welcome.
 
@@ -35,7 +37,7 @@ This integration does not connect to Roborock itself. It adds the camera-robot f
 |---|---|---|
 | Home Assistant's core **Roborock** integration | The Roborock account login and connection (local and cloud), the vacuum entity, start, stop, return to dock, room and zone cleaning, maps, sensors, consumables, `roborock.set_vacuum_goto_position` | Yes. Every command of this integration is sent through its vacuum entity |
 | **go2rtc** that you run (standalone app or the one inside Frigate) | The live video and the talk channel, through its `roborock://` source | Only for video and talk |
-| **Roborock Camera** (this repository) | Live view camera entity, Search for pet, Resume patrol, Stop remote drive, Talk volume, services `move`, `stop_moving`, `patrol` | - |
+| **Roborock Camera** (this repository) | Live view camera entity, Search for pet, Resume patrol, Stop remote drive, Talk volume, Vacuum then mop, services `move`, `stop_moving`, `patrol` | - |
 | A WebRTC dashboard card with a microphone (for example Advanced Camera Card or WebRTC Camera) | Talking through the robot's speaker | Only for talk |
 
 Remote drive, pet search, patrol and talk volume need only the core Roborock integration and this one. Video and talk also need go2rtc.
