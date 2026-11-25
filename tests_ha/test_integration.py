@@ -379,6 +379,11 @@ async def test_clean_then_mop_on_off(hass, then_mop):
     await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
     assert hass.states.get(sw).state == "off" and then_mop.table == []
     assert (s.fan_power, s.water_box_mode, s.mop_mode) == (102, 235, 303), "off restores the global settings"
+    await hass.services.async_call("switch", "turn_on", {"entity_id": sw}, blocking=True)
+    s.water_box_mode = None  # the robot leaves a value out of some polls
+    await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
+    assert then_mop.table == [] and (s.fan_power, s.mop_mode) == (102, 303), "off does not need every value"
+    assert then_mop.modes[-2:] == [("set_custom_mode", [102]), ("set_mop_mode", [303])], "custom mode is left before the table goes"
 
 
 async def test_clean_then_mop_waits_for_dock_and_follows_settings(hass, then_mop):

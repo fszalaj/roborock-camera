@@ -130,16 +130,19 @@ class CleanThenMop(SwitchEntity):
                 raise Busy("the robot is cleaning; change this when it is docked")
             before = then_mop_settings(self._rooms, self._table)
             try:
-                base = then_mop_base(settings, before) if on or before else None
-                table = then_mop_table(self._rooms, self._table, base or settings, on)
+                table = then_mop_table(self._rooms, self._table, then_mop_base(settings, before) if on else settings, on)
             except ValueError as err:
                 raise HomeAssistantError(str(err)) from err
             if on and not then_mop_on(self._rooms, self._table) and self._table:
                 _LOGGER.info("clean-then-mop replaces the room table %s", self._table)
+            # the table outside custom mode is ignored, so: on writes it before custom mode, off leaves custom mode first
+            restore = [] if on else [(cmd, b) for cmd, v, c, b in zip(MODES, settings, CUSTOM, before or (None,) * 3)
+                                     if v == c and b is not None]
+            for cmd, value in restore:
+                await core.properties_api.command.send(cmd, [value])
             await core.properties_api.command.send(SET, table)
-            if on or (base and any(v == c for v, c in zip(settings, CUSTOM))):
-                for cmd, value in zip(MODES, CUSTOM if on else base):
-                    await core.properties_api.command.send(cmd, [value])
+            for cmd, value in zip(MODES, CUSTOM) if on else ():
+                await core.properties_api.command.send(cmd, [value])
             await core.properties_api.status.refresh()
             await self._read(core)
             if self._attr_is_on != on or (on and tuple(self._settings(core)) != CUSTOM):
