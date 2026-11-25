@@ -47,8 +47,14 @@ class ThenMop(unittest.TestCase):
             {"segment": 2, "fan_power": 102, "water_box_mode": 235, "mop_mode": 303, "repeat": 1, "seq_type": 1},
         ])
         self.assertTrue(logic.then_mop_on([1, 2], t))
-        self.assertFalse(logic.then_mop_stale([1, 2], t, self.G))
-        self.assertTrue(logic.then_mop_stale([1, 2], t, (104, 235, 303)))
+        self.assertTrue(logic.then_mop_stale([1, 2], t, self.G), "not in custom mode yet")
+        self.assertFalse(logic.then_mop_stale([1, 2], t, (106, 204, 302)))
+        self.assertTrue(logic.then_mop_stale([1, 2], t, (104, 204, 302)))
+        self.assertEqual(logic.then_mop_settings([1, 2], t), self.G)
+        self.assertEqual(logic.then_mop_base((104, 204, 302), self.G), (104, 235, 303))
+        self.assertEqual(logic.then_mop_base(self.G, None), self.G)
+        with self.assertRaises(ValueError):
+            logic.then_mop_base((106, 235, 303), None)
 
     def test_off_restores_empty(self):
         on = logic.then_mop_table([1, 2], [], self.G, True)

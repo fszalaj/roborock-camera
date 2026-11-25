@@ -1,6 +1,7 @@
 """Vacuum each room before mopping it: the robot's per-room table, written through the core Roborock connection.
 
-The robot keeps this order only per room, so while it is on every room follows the global settings.
+The robot keeps this order only per room and uses the room table only in its custom mode, so while it is on
+every room gets the global settings and the robot is put in custom mode; off restores the global settings.
 Writing the table during a run pauses the robot, so changes wait until it is docked or idle.
 """
 
@@ -12,12 +13,13 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 
-from .logic import then_mop_on, then_mop_stale, then_mop_table
+from .logic import CUSTOM, then_mop_base, then_mop_on, then_mop_settings, then_mop_stale, then_mop_table
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=5)
 QUIET = ("docked", "idle")
 GET, SET = "get_customize_clean_mode", "set_customize_clean_mode"
+MODES = ("set_custom_mode", "set_water_box_custom_mode", "set_mop_mode")  # fan, water, route
 
 
 class Busy(HomeAssistantError):
@@ -69,7 +71,19 @@ class CleanThenMop(SwitchEntity):
             raise HomeAssistantError(f"unexpected {GET} answer")
         self._table = table
         self._attr_is_on = then_mop_on(self._rooms, table)
+        self._attr_extra_state_attributes = self._names(api.status, then_mop_settings(self._rooms, table))
         self._attr_available = True
+
+    @staticmethod
+    def _names(status, codes) -> dict:
+        """The rooms' fan, water and route by the names the core entities use (the robot itself reports custom)."""
+        if not codes:
+            return {}
+        try:
+            maps = (status.fan_speed_mapping, status.water_mode_mapping, {r.code: r.value for r in status.mop_route_options})
+        except Exception:  # noqa: BLE001 - names are a convenience for dashboards
+            return {}
+        return {k: m.get(c) for k, m, c in zip(("fan_speed", "mop_intensity", "mop_mode"), maps, codes)}
 
     def _subscribe(self, core) -> None:
         if core is not self._subscribed:
@@ -114,15 +128,21 @@ class CleanThenMop(SwitchEntity):
                 return
             if not self._quiet(core):
                 raise Busy("the robot is cleaning; change this when it is docked")
+            before = then_mop_settings(self._rooms, self._table)
             try:
-                table = then_mop_table(self._rooms, self._table, settings, on)
+                base = then_mop_base(settings, before) if on or before else None
+                table = then_mop_table(self._rooms, self._table, base or settings, on)
             except ValueError as err:
                 raise HomeAssistantError(str(err)) from err
             if on and not then_mop_on(self._rooms, self._table) and self._table:
                 _LOGGER.info("clean-then-mop replaces the room table %s", self._table)
             await core.properties_api.command.send(SET, table)
+            if on or (base and any(v == c for v, c in zip(settings, CUSTOM))):
+                for cmd, value in zip(MODES, CUSTOM if on else base):
+                    await core.properties_api.command.send(cmd, [value])
+            await core.properties_api.status.refresh()
             await self._read(core)
-            if self._attr_is_on != on:
+            if self._attr_is_on != on or (on and tuple(self._settings(core)) != CUSTOM):
                 raise HomeAssistantError("the robot did not keep the new room order")
         if self.entity_id:  # a sync can run from the first update, before the entity is added
             self.async_write_ha_state()

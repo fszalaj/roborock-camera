@@ -84,9 +84,26 @@ def then_mop_table(rooms: list[int], table: list[dict], settings: tuple[int, int
     return out
 
 
-def then_mop_stale(rooms: list[int], table: list[dict], settings: tuple[int, int, int]) -> bool:
-    """On, but a room still holds older global settings."""
-    if not then_mop_on(rooms, table) or tuple(settings) == CUSTOM or None in settings:
-        return False
+def then_mop_settings(rooms: list[int], table: list[dict]) -> tuple | None:
+    """The fan, water and route the order wrote for its rooms (the robot runs them in custom mode)."""
     by = {e.get("segment"): e for e in table}
-    return any((by[r].get("fan_power"), by[r].get("water_box_mode"), by[r].get("mop_mode")) != tuple(settings) for r in rooms)
+    for r in rooms:
+        e = by.get(r)
+        if e and e.get("seq_type") == SEQ_THEN_MOP:
+            return (e.get("fan_power"), e.get("water_box_mode"), e.get("mop_mode"))
+    return None
+
+
+def then_mop_base(settings: tuple, previous: tuple | None) -> tuple:
+    """Global settings for the rooms: a value still at its custom sentinel keeps what the rooms had."""
+    out = tuple(p if s == c else s for s, c, p in zip(settings, CUSTOM, previous or (None,) * 3))
+    if None in out or any(v == c for v, c in zip(out, CUSTOM)):
+        raise ValueError("global settings unknown or custom")
+    return out
+
+
+def then_mop_stale(rooms: list[int], table: list[dict], settings: tuple[int, int, int]) -> bool:
+    """On, but the robot is not in custom mode (it ignores the room table there): a setting was changed."""
+    if not then_mop_on(rooms, table) or None in settings:
+        return False
+    return tuple(settings) != CUSTOM

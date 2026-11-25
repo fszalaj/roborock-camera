@@ -25,7 +25,7 @@ Tested on a Saros 20 (`roborock.vacuum.a288`, firmware 02.57.88) with Home Assis
 | Talk through the robot (go2rtc backchannel) | audio reaches the robot; not confirmed by ear |
 | Patrol through map points | works; points are whole map coordinates |
 | Drive to a point | core service `roborock.set_vacuum_goto_position`; works |
-| Vacuum, then mop | the robot keeps the order (per-room table read back); the order in a real run not yet observed. While on, every room follows the global settings; the switch changes the table only when the robot is docked, because a write during a run pauses it |
+| Vacuum, then mop | observed on a Saros 20 run: the robot detaches the mop, vacuums the room, washes and attaches the mop, then mops it. The robot uses the per-room table only in its custom mode, so on also switches to custom mode (attributes `fan_speed`, `mop_intensity`, `mop_mode` name the rooms' settings) and off restores the global settings. A global setting changed while on is copied to the rooms at the next dock visit; the table is written only when the robot is docked, because a write during a run pauses it |
 
 Other Roborock models with remote video may work; reports are welcome.
 

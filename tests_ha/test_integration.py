@@ -311,9 +311,17 @@ class FakeRobot:
         from types import SimpleNamespace as NS
 
         self.duid = "duid123"
-        self.table, self.sets, self.listeners = [], [], []
-        self.status = NS(fan_power=102, water_box_mode=235, mop_mode=303, in_cleaning=0)
+        self.table, self.sets, self.listeners, self.modes = [], [], [], []
         robot = self
+
+        class Status(NS):
+            async def refresh(self):
+                pass
+
+        self.status = Status(fan_power=102, water_box_mode=235, mop_mode=303, in_cleaning=0,
+                             fan_speed_mapping={102: "balanced", 104: "max"}, water_mode_mapping={235: "medium"},
+                             mop_route_options=[NS(code=303, value="deep_plus")])
+        modes = {"set_custom_mode": "fan_power", "set_water_box_custom_mode": "water_box_mode", "set_mop_mode": "mop_mode"}
 
         class Rooms:
             rooms = [NS(segment_id=1), NS(segment_id=2)]
@@ -325,6 +333,10 @@ class FakeRobot:
             async def send(self, command, params=None):
                 if command == "get_customize_clean_mode":
                     return [dict(e) for e in robot.table]
+                if command in modes:
+                    robot.modes.append((command, params))
+                    setattr(robot.status, modes[command], params[0])
+                    return
                 robot.sets.append(params)
                 robot.table = [dict(e) for e in params]
 
@@ -360,8 +372,13 @@ async def test_clean_then_mop_on_off(hass, then_mop):
     assert hass.states.get(sw).state == "on"
     assert [e["seq_type"] for e in then_mop.table] == [1, 1]
     assert {e["mop_mode"] for e in then_mop.table} == {303}
+    s = then_mop.status
+    assert (s.fan_power, s.water_box_mode, s.mop_mode) == (106, 204, 302), "the robot uses the room table only in custom mode"
+    a = hass.states.get(sw).attributes
+    assert (a["fan_speed"], a["mop_intensity"], a["mop_mode"]) == ("balanced", "medium", "deep_plus")
     await hass.services.async_call("switch", "turn_off", {"entity_id": sw}, blocking=True)
     assert hass.states.get(sw).state == "off" and then_mop.table == []
+    assert (s.fan_power, s.water_box_mode, s.mop_mode) == (102, 235, 303), "off restores the global settings"
 
 
 async def test_clean_then_mop_waits_for_dock_and_follows_settings(hass, then_mop):
@@ -380,6 +397,8 @@ async def test_clean_then_mop_waits_for_dock_and_follows_settings(hass, then_mop
         cb()
     await hass.async_block_till_done()
     assert len(then_mop.sets) == 2 and {e["fan_power"] for e in then_mop.table} == {104}
+    assert {(e["water_box_mode"], e["mop_mode"]) for e in then_mop.table} == {(235, 303)}, "untouched settings keep the room values"
+    assert then_mop.status.fan_power == 106, "back in custom mode"
     for cb in then_mop.listeners:
         cb()
     await hass.async_block_till_done()
