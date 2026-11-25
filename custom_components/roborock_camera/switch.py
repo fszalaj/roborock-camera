@@ -17,6 +17,7 @@ from .logic import CUSTOM, then_mop_base, then_mop_on, then_mop_settings, then_m
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=5)
+SYNC_DELAY = 20  # s: a start right after a settings change reaches the vacuum state late; never write into it
 QUIET = ("docked", "idle")
 GET, SET = "get_customize_clean_mode", "set_customize_clean_mode"
 MODES = ("set_custom_mode", "set_water_box_custom_mode", "set_mop_mode")  # fan, water, route
@@ -106,7 +107,6 @@ class CleanThenMop(SwitchEntity):
                 core = self._core()
                 self._subscribe(core)
                 await self._read(core)
-                self._failed = None  # a failed sync gets another try each poll
             except Exception as err:  # noqa: BLE001
                 self._attr_available = False
                 _LOGGER.debug("clean-then-mop read failed: %s", err)
@@ -143,12 +143,14 @@ class CleanThenMop(SwitchEntity):
             await core.properties_api.command.send(SET, table)
             for cmd, value in zip(MODES, CUSTOM) if on else ():
                 await core.properties_api.command.send(cmd, [value])
-            await core.properties_api.status.refresh()
-            await self._read(core)
-            if self._attr_is_on != on or (on and tuple(self._settings(core)) != CUSTOM):
-                raise HomeAssistantError("the robot did not keep the new room order")
-        if self.entity_id:  # a sync can run from the first update, before the entity is added
-            self.async_write_ha_state()
+            try:
+                await core.properties_api.status.refresh()
+                await self._read(core)
+                if self._attr_is_on != on or (on and tuple(self._settings(core)) != CUSTOM):
+                    raise HomeAssistantError("the robot did not keep the new room order")
+            finally:
+                if self.entity_id:  # a sync can run from the first update, before the entity is added
+                    self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs) -> None:
         await self._apply(True)
@@ -171,6 +173,7 @@ class CleanThenMop(SwitchEntity):
 
     async def _sync(self, settings) -> None:
         try:
+            await asyncio.sleep(SYNC_DELAY)
             await self._apply(True, only_if_stale=True)
             self._failed = None
         except Busy:

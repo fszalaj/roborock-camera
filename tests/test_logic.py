@@ -55,6 +55,8 @@ class ThenMop(unittest.TestCase):
         self.assertEqual(logic.then_mop_base(self.G, None), self.G)
         with self.assertRaises(ValueError):
             logic.then_mop_base((106, 235, 303), None)
+        with self.assertRaises(ValueError):
+            logic.then_mop_base((110, 235, 303), None)
 
     def test_off_restores_empty(self):
         on = logic.then_mop_table([1, 2], [], self.G, True)

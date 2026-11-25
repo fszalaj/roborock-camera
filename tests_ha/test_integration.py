@@ -348,8 +348,9 @@ class FakeRobot:
 
 
 @pytest.fixture
-async def then_mop(hass, vacuum, sent):
+async def then_mop(hass, vacuum, sent, monkeypatch):
     from types import SimpleNamespace as NS
+    monkeypatch.setattr("custom_components.roborock_camera.switch.SYNC_DELAY", 0)
     from homeassistant.config_entries import ConfigEntryState
 
     core = FakeRobot()

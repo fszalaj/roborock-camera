@@ -50,6 +50,7 @@ class RemoteDrive:
 
 CUSTOM = (106, 204, 302)  # fan, water, route the robot reports while it runs its own per-room custom mode
 SEQ_THEN_MOP = 1
+SMART = (110, 209, 306)  # fan, water, route of the robot's own smart mode
 
 
 def then_mop_on(rooms: list[int], table: list[dict]) -> bool:
@@ -99,6 +100,8 @@ def then_mop_base(settings: tuple, previous: tuple | None) -> tuple:
     out = tuple(p if s == c else s for s, c, p in zip(settings, CUSTOM, previous or (None,) * 3))
     if None in out or any(v == c for v, c in zip(out, CUSTOM)):
         raise ValueError("global settings unknown or custom")
+    if any(v == m for v, m in zip(out, SMART)):
+        raise ValueError("the robot is in smart mode")
     return out
 
 
